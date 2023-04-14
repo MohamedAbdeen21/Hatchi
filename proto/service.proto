@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+package database_connect;
+
+service DatabaseConnect {
+  rpc Execute(Query) returns (QueryResult) {}
+  rpc SelectConnector(ConnectorName) returns (Empty) {}
+  rpc ListConnectors(Empty) returns (Connectors) {}
+}
+
+message Query {
+  string query = 1;
+}
+
+message QueryResult {
+  repeated Row result = 1;
+}
+
+message Row {
+  repeated string row = 1;
+}
+
+message ConnectorName {
+    string name = 1;
+}
+
+message Empty {}
+
+message Connectors {
+    repeated string names = 1;
+}
