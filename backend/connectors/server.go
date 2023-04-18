@@ -11,7 +11,6 @@ type ConnectorServer struct {
 	pb.DatabaseConnectServer
 	Databases map[string]connector
 	Current   connector
-	Previous  connector
 }
 
 // factory function; creates and returns a ConnectorServer struct
