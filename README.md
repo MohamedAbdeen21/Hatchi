@@ -19,8 +19,8 @@
    run `proto/compile` to generate required files (script requires `HATCHI_HOME`
    environment variable).
 
-If you modify the `proto/service.proto` file, make sure to run
-`proto/compile` shell script to compile the client and server for both Go and
+If you modify the `proto/*.proto` files, make sure to run
+`proto/compile` bash script to compile the client and server for both Go and
 Flutter.
 
 To run the project, type:
@@ -37,6 +37,6 @@ cd hatchi && flutter run [platform] --dart-define=HATCHI_HOME=$HATCHI_HOME
 
 You can add more databases to the software by adding a `struct` that satisfies
 the interface `connector` found in `backend/connectors/init.go` and then adding
-the new connector to `databases` in the same file.
+the new connector to `Connectors` list in `backend/connectors/init.go`.
 
 Don't forget to recompile the backend into a `server` executable.
