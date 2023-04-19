@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:grpc/grpc.dart';
 
-import 'proto/service.pbgrpc.dart';
+import 'proto/connectors.pbgrpc.dart';
 
 const String socket = "/tmp/test.socket";
 
