@@ -72,7 +72,14 @@ class _MyHomePageState extends State<MyHomePage> {
   // send to gRPC and set result
   void _callGrpcService() async {
     // server initially have nil database
-    client.selectConnector(ConnectorName(name: "sqlite"));
+    const String connector = "sqlite";
+    ConnectionOptions options = await client.selectConnector(ConnectorName(name: connector));
+
+    await client.connect(
+      ConnectionOptions(
+        connectorName:connector, 
+        fields: 
+        [ConnectionOptionField(name: options.fields[0].name, require: options.fields[0].require, value: ":memory")]));
     
     try {
       var response = await client.execute(input);

@@ -12,16 +12,24 @@ import (
 const port = ":9000"
 
 type sqliteConnector struct {
-	db *sql.DB
+	db      *sql.DB
+	options *pb.ConnectionOptions
 }
 
-func newSqliteConnector(dbname string) *sqliteConnector {
-	db, err := sql.Open("sqlite3", dbname)
+func newSqliteConnector() *sqliteConnector {
 	// TODO: log and return the error
-	if err != nil {
-		print(err.Error())
+	string_type := "String" // can't reference a string literal, assign to var first
+	options := pb.ConnectionOptions{
+		Fields: []*pb.ConnectionOptionField{
+			{Name: "File name", Type: &string_type, Require: true},
+		},
 	}
-	return &sqliteConnector{db: db}
+
+	return &sqliteConnector{options: &options}
+}
+
+func (s *sqliteConnector) Name() string {
+	return "sqlite"
 }
 
 // Execute the query and read the results
@@ -37,6 +45,21 @@ func (s *sqliteConnector) Execute(ctx context.Context, query *pb.Query) (*pb.Que
 	}
 
 	return &pb.QueryResult{Result: result}, nil
+}
+
+func (s *sqliteConnector) ListConnectionOptions() (*pb.ConnectionOptions, error) {
+	s.options.ConnectorName = s.Name()
+	return s.options, nil
+}
+
+func (s *sqliteConnector) Connect(ctx context.Context, options *pb.ConnectionOptions) error {
+	dbname := *(options.Fields[0].Value)
+	db, err := sql.Open("sqlite3", dbname)
+	if err != nil {
+		return err
+	}
+	s.db = db
+	return nil
 }
 
 func readAllRows(rows *sql.Rows) ([]*pb.Row, error) {

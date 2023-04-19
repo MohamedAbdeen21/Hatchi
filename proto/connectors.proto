@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+package database_connect;
+
+service DatabaseConnect {
+  rpc ListConnectors(Empty) returns (ConnectorsList) {}
+  
+  rpc Execute(Query) returns (QueryResult) {}
+
+  // workflow: user chooses connector, connector sends what it needs to 
+  // establish connection, user provides values and sends them again
+  // using connect
+  rpc SelectConnector(ConnectorName) returns (ConnectionOptions) {}
+  rpc Connect(ConnectionOptions) returns (Empty) {}
+}
+
+message Query {
+  string query = 1;
+}
+
+message QueryResult {
+  repeated Row result = 1;
+}
+
+message Row {
+  repeated string row = 1;
+}
+
+message ConnectorName {
+    string name = 1;
+}
+
+message Empty {}
+
+message ConnectorsList {
+    repeated string names = 1;
+}
+
+message ConnectionOptionField {
+    string name = 1;
+    optional string type = 2;
+    bool require = 3;
+    optional string value = 4;
+  }
+
+message ConnectionOptions {
+    string connectorName = 1;
+    repeated ConnectionOptionField fields = 2;
+  }

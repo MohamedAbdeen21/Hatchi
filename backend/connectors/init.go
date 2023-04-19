@@ -7,11 +7,14 @@ import (
 )
 
 // add new connectors here
-var databases = map[string]connector{
-	"sqlite": newSqliteConnector(":memory"),
+var Connectors = []Connector{
+	newSqliteConnector(),
 }
 
 // methods the connector must implement
-type connector interface {
+type Connector interface {
+	Name() string
 	Execute(context.Context, *pb.Query) (*pb.QueryResult, error)
+	ListConnectionOptions() (*pb.ConnectionOptions, error)
+	Connect(context.Context, *pb.ConnectionOptions) error
 }

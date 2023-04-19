@@ -1,7 +1,6 @@
 package main
 
 import (
-	"Hatchi/backend/connectors"
 	"log"
 	"net"
 	"os"
@@ -41,7 +40,7 @@ func main() {
 	go killOnInterrupt(grpcServer, signalChannel)
 
 	// register the service and start the gRPC server
-	server := connectors.NewConnectorServer()
+	server := newConnectorServer()
 	pb.RegisterDatabaseConnectServer(grpcServer, server)
 
 	// serve the server

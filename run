@@ -1,0 +1,4 @@
+#! /bin/bash
+
+cd $HATCHI_HOME/backend && go build -o server .
+cd $HATCHI_HOME/hatchi && flutter run --dart-define=HATCHI_HOME=$HATCHI_HOME

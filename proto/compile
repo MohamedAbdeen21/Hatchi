@@ -10,12 +10,12 @@ export PATH="$PATH:$(go env GOPATH)/bin" && \
          --go-grpc_out=$HATCHI_HOME/backend/proto/ \
          --go_opt=paths=source_relative \
          --go-grpc_opt=paths=source_relative \
-         $HATCHI_HOME/proto/service.proto && \
+         $HATCHI_HOME/proto/connectors.proto && \
          echo "Compile successful for Go"
 
 # compile for flutter
 sudo mkdir -p -m 777 $HATCHI_HOME/hatchi/lib/proto
 export PATH="$PATH":"$HOME/.pub-cache/bin" && \
   cd $HATCHI_HOME/hatchi/ && dart pub global activate protoc_plugin && cd - && \
-  protoc --dart_out=grpc:$HATCHI_HOME/hatchi/lib/proto -I $HATCHI_HOME/proto $HATCHI_HOME/proto/service.proto && \
+  protoc --dart_out=grpc:$HATCHI_HOME/hatchi/lib/proto -I $HATCHI_HOME/proto $HATCHI_HOME/proto/connectors.proto && \
   echo "Compile successful for Flutter"
