@@ -30,7 +30,10 @@ func newConnectorServer() *ConnectorServer {
 }
 
 // change current database connector
-func (c *ConnectorServer) SelectConnector(ctx context.Context, name *pb.ConnectorName) (*pb.ConnectionOptions, error) {
+func (c *ConnectorServer) SelectConnector(
+	ctx context.Context,
+	name *pb.ConnectorName,
+) (*pb.ConnectionOptions, error) {
 	conn, exists := c.Databases[name.Name]
 
 	// name provided is not an connector
@@ -45,7 +48,10 @@ func (c *ConnectorServer) SelectConnector(ctx context.Context, name *pb.Connecto
 	return conn.ListConnectionOptions()
 }
 
-func (c *ConnectorServer) Connect(ctx context.Context, options *pb.ConnectionOptions) (*pb.Empty, error) {
+func (c *ConnectorServer) Connect(
+	ctx context.Context,
+	options *pb.ConnectionOptions,
+) (*pb.Empty, error) {
 	var exists bool
 	c.Previous = c.Current
 	c.Current, exists = c.Databases[options.ConnectorName]
@@ -67,7 +73,10 @@ func (c *ConnectorServer) Execute(ctx context.Context, query *pb.Query) (*pb.Que
 }
 
 // Return a list of all available connectors
-func (c *ConnectorServer) ListConnectors(ctx context.Context, _ *pb.Empty) (*pb.ConnectorsList, error) {
+func (c *ConnectorServer) ListConnectors(
+	ctx context.Context,
+	_ *pb.Empty,
+) (*pb.ConnectorsList, error) {
 	return &pb.ConnectorsList{Names: c.getAllConnectors()}, nil
 }
 

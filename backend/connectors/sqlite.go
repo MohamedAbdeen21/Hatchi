@@ -22,6 +22,7 @@ func newSqliteConnector() *sqliteConnector {
 	options := pb.ConnectionOptions{
 		Fields: []*pb.ConnectionOptionField{
 			{Name: "File name", Type: &string_type, Require: true},
+			{Name: "File name", Type: &string_type, Require: false}, // just for example
 		},
 	}
 

@@ -1,35 +1,13 @@
-import 'dart:io';
-
+import 'package:client/proto/connectors.pb.dart';
 import 'package:flutter/material.dart';
-import 'package:grpc/grpc.dart';
+import 'api.dart';
 
-import 'proto/connectors.pbgrpc.dart';
-
-const String socket = "/tmp/test.socket";
+const secondaryColor = Colors.blue;
+const secondaryShade = 800;
 
 void main() {
   initGRPCServer();
   runApp(const MyApp());
-}
-
-initGRPCServer() async {
-  // fetch the root of the project
-  // use env variable when testing
-  String home = const String.fromEnvironment("HATCHI_HOME");
-  if (home.isEmpty) {
-    home = Directory(Platform.script.path).parent.path;
-  }
-
-  // check if socket is binded, close if true
-  if (File(socket).existsSync()) {
-    File(socket).delete();
-  }
-
-  // start the Go gRPC server, creates socket by default
-  var server = await Process.start("./server", [],
-      workingDirectory: "$home/backend/");
-  stdout.addStream(server.stdout);
-  stderr.addStream(server.stderr);
 }
 
 class MyApp extends StatelessWidget {
@@ -37,13 +15,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+    return const MaterialApp(
+        title: "Hatchi", home: MyHomePage(title: "Hatchi"));
   }
 }
 
@@ -56,51 +29,29 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // output and input to gRPC
-  String result = "";
-  Query input = Query(query: "SELECT 1,2,3;");
   TextEditingController textController = TextEditingController();
-  String home = Directory(Platform.script.path).parent.path;
 
-  // start the gRPC client over UDS and without TLS
-  DatabaseConnectClient client = DatabaseConnectClient(ClientChannel(
-      InternetAddress(socket, type: InternetAddressType.unix),
-      options:
-          const ChannelOptions(credentials: ChannelCredentials.insecure())));
-  
+  // final GlobalKey<ScaffoldState> _key = GlobalKey();
+  //
+  // void _listOptions(String connectorName) {
+  //   api.selectConnector(ConnectorName(name: connectorName))
+  //     .then((options) => options.fields.map((field) => { print(field.name) }));
+  // }
 
-  // send to gRPC and set result
-  void _callGrpcService() async {
-    // server initially have nil database
-    const String connector = "sqlite";
-    ConnectionOptions options = await client.selectConnector(ConnectorName(name: connector));
-
-    await client.connect(
-      ConnectionOptions(
-        connectorName:connector, 
-        fields: 
-        [ConnectionOptionField(name: options.fields[0].name, require: options.fields[0].require, value: ":memory")]));
-    
-    try {
-      var response = await client.execute(input);
-      var availableDatabases = await client.listConnectors(Empty());
-      setState(() {
-        result = "";
-        result += availableDatabases.names.join(" ");
-        result += response.result.map(
-            (e) => e.row.join(" ")
-        ).join('\n');
-      });
-    } on GrpcError catch (e) {
-      setState(() {
-        result = e.message.toString();
-      });
-    }
+  void _callGrpc(String query) async {
+    result = await callGrpcService(query);
   }
+
+  String result = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        appBar: AppBar(
+          title: const Text("Hatchi"),
+          backgroundColor: secondaryColor[secondaryShade],
+        ),
+        drawer: const ConnectorsDrawer(),
         body: Center(
             child: Column(children: <Widget>[
           TextFormField(
@@ -108,7 +59,6 @@ class _MyHomePageState extends State<MyHomePage> {
             decoration: InputDecoration(
                 filled: true,
                 hintText: "Enter SQL Query",
-                // fillColor: Colors.red,
                 border: OutlineInputBorder(
                     borderSide: BorderSide.none,
                     borderRadius: BorderRadius.circular(20))),
@@ -120,9 +70,143 @@ class _MyHomePageState extends State<MyHomePage> {
         ])),
         floatingActionButton: FloatingActionButton(
             onPressed: () {
-              input = Query(query: textController.text);
-              _callGrpcService();
+              setState(() {
+                _callGrpc(textController.text);
+              });
             },
             child: const Icon(Icons.play_arrow)));
+  }
+}
+
+class ConnectorsDrawer extends StatelessWidget {
+  const ConnectorsDrawer({Key? key}) : super(key: key);
+
+  Future<List<Card>> buildConnectorsMenu(BuildContext context) async {
+    List<Card> tiles = [];
+    for (var connector in await listConnectors()) {
+      tiles.add(Card(
+          child: ListTile(
+        leading: const Icon(Icons.dataset),
+        onTap: () {
+          Navigator.pop(context);
+          Popup().connectorPopup(context, connector);
+        },
+        contentPadding: const EdgeInsets.all(20),
+        title: Text(connector, style: Theme.of(context).textTheme.titleLarge),
+      )));
+    }
+
+    return tiles;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+        child: FutureBuilder<List<Widget>>(
+            future: buildConnectorsMenu(context),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const CircularProgressIndicator();
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(10),
+                itemCount: snapshot.data?.length,
+                itemBuilder: (context, index) {
+                  return snapshot.data?[index];
+                },
+              );
+            }));
+  }
+}
+
+class Popup {
+  Map<ConnectionOptionField, TextEditingController> controllers = {};
+
+  List<Widget> listOptions(ConnectionOptions options) {
+    return options.fields.map((field) {
+      TextEditingController textController = TextEditingController();
+      controllers[field] = textController;
+      return Card(
+          child: ListTile(
+              leading: Text(field.name),
+              trailing: Text(field.require ? "*" : "",
+                  style: const TextStyle(color: Colors.red)),
+              title: TextFormField(
+                controller: textController,
+                validator: (value) {
+                  if (field.require && (value == null || value.isEmpty)) {
+                    return "Field is required";
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                  hintText: field.type,
+                  filled: true,
+                  fillColor: Colors.black12, // 12 is opacity
+                  contentPadding: const EdgeInsets.fromLTRB(30, 8, 30, 10),
+                  // border: OutlineInputBorder(
+                  //     borderSide: BorderSide.none,
+                  // borderRadius: BorderRadius.circular(20)
+                  // )
+                ),
+              )));
+    }).toList();
+  }
+
+  List<ElevatedButton> createButtons(BuildContext context, String connector) {
+    ButtonStyle style = ButtonStyle(
+        backgroundColor:
+            MaterialStatePropertyAll(secondaryColor[secondaryShade]),
+        padding: const MaterialStatePropertyAll(
+            EdgeInsets.fromLTRB(25, 20, 25, 20)));
+
+    return [
+      ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: style,
+          child: const Text("Cancel")),
+      ElevatedButton(
+        style: style,
+        onPressed: () {
+          controllers
+              .forEach((field, controller) => field.value = controller.text);
+          api.connect(ConnectionOptions(
+            connectorName: connector,
+            fields: controllers.keys,
+          ));
+          Navigator.pop(context);
+        },
+        child: const Text("Connect"),
+      )
+    ];
+  }
+
+  Future<dynamic> connectorPopup(BuildContext context, String connector) {
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return FutureBuilder(
+              future: api.selectConnector(ConnectorName(name: connector)),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const CircularProgressIndicator();
+                }
+                return AlertDialog(
+                  title: Text("Connecting to $connector"),
+                  content: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                        minWidth: 600,
+                        maxWidth: 600,
+                        maxHeight: 800,
+                        minHeight: 800),
+                    child: ListView(
+                        padding: const EdgeInsets.all(5),
+                        children: listOptions(snapshot.data!)),
+                  ),
+                  actions: createButtons(context, connector),
+                );
+              });
+        });
   }
 }
